@@ -3,6 +3,8 @@ const userController = require("./controllers/userController");
 const postController = require("./controllers/postController");
 const followController = require("./controllers/followController");
 const clientController = require("./controllers/clientController"); // Make sure to create this controller
+const visitController = require("./controllers/visitController");
+
 const cors = require("cors");
 
 apiRouter.use(cors());
@@ -41,6 +43,9 @@ apiRouter.delete("/client/:id", clientController.apiDeleteClient);  // Delete a 
 apiRouter.post("/create-client", clientController.apiCreateClient);  // Create a new client
 apiRouter.get("/clients", clientController.apiGetAllClients);  // Retrieve all clients
 
+// Visit related routes
+apiRouter.post("/client/:clientId/create-visit", visitController.apiCreateVisit);  // Log a new visit for a client
+apiRouter.get("/client/:clientId/visits", visitController.apiGetVisitsByClient);  // Retrieve all visits for a specific client
 
 
 module.exports = apiRouter;
