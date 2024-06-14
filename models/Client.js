@@ -1,5 +1,7 @@
 const mongodb = require('mongodb');
 const clientsCollection = require('../db').db().collection("clients");
+const qrcode = require('qrcode');
+
 
 let Client = function(data) {
     this.data = data;
@@ -31,10 +33,20 @@ Client.prototype.create = function() {
         this.validate();
         if (!this.errors.length) {
             try {
+                // Generate QR Code first using a placeholder or another unique identifier if _id is not yet available
+                const placeholderId = new mongodb.ObjectId(); // Generate a temporary unique ID for QR code generation
+                const qrCodeData = await qrcode.toDataURL(placeholderId.toString());
+
+                // Attach QR code data to the client object
+                this.data.qrCode = qrCodeData;
+
+                // Then, insert the client data into the database, including the QR code
                 const result = await clientsCollection.insertOne(this.data);
-                // Include the new client's ID in the resolved value
-                this.data._id = result.insertedId;  // This adds the _id to your data object
-                resolve(this.data);  // Resolve with the full data object, including the ID
+
+                // Attach the actual _id from the database to the client object
+                this.data._id = result.insertedId;
+
+                resolve(this.data);  // Resolve with the full data object, including the QR Code
             } catch (e) {
                 this.errors.push("Database error: " + e);
                 reject(this.errors);
@@ -44,6 +56,8 @@ Client.prototype.create = function() {
         }
     });
 }
+
+
 
 
 Client.findAll = function() {
