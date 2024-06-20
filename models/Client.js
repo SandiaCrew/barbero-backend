@@ -35,7 +35,13 @@ Client.prototype.create = function() {
             try {
                 // Generate QR Code first using a placeholder or another unique identifier if _id is not yet available
                 const placeholderId = new mongodb.ObjectId(); // Generate a temporary unique ID for QR code generation
-                const qrCodeData = await qrcode.toDataURL(placeholderId.toString());
+                const qrCodeOptions = {
+                    errorCorrectionLevel: 'H',  // Higher error resilience
+                    margin: 4,                  // Default margin
+                    scale: 8                    // Higher resolution
+                };
+                const qrCodeData = await qrcode.toDataURL(placeholderId.toString(), qrCodeOptions);
+                
 
                 // Attach QR code data to the client object
                 this.data.qrCode = qrCodeData;
