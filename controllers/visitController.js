@@ -10,7 +10,7 @@ exports.apiGetVisitsByClient = function(req, res) {
             if (visits.length > 0) {
                 res.status(200).json(visits); // If we find any visits, we show them all.
             } else {
-                res.status(404).json({ message: "No visits found for this clienttttt" }); // If no visits are found, we say so.
+                res.status(404).json({ message: "No visits found for this client" }); // If no visits are found, we say so.
             }
         })
         .catch(errors => {
