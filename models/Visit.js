@@ -1,64 +1,72 @@
+// Visit.js
+
 const mongodb = require('mongodb');
 const visitsCollection = require('../db').db().collection("visits");
 
-// This is our recipe book for keeping track of visits.
 let Visit = function(data) {
     this.data = data;
     this.errors = [];
 }
 
-// Making sure each entry in our visit book is neat and correct.
+// Ensures data is clean and formatted correctly.
 Visit.prototype.cleanUp = function() {
-    // Check if the date is actually a date; if not, record today's date.
     if (!(this.data.date instanceof Date)) {
         this.data.date = new Date();
     }
 
-    // Overwrite with cleaned up data
+    // Ensure the date is stripped of time information and only contains the date part.
+    this.data.date = new Date(this.data.date.setHours(0, 0, 0, 0));
+
+    // We will store only the clientId and the formatted date.
     this.data = {
-        clientId: new mongodb.ObjectId(this.data.clientId), // Link to a client using their unique ID
-        date: this.data.date, // The exact date and time they visited
-        hour: this.data.date.getHours(), // What hour they visited
-        minute: this.data.date.getMinutes() // What minute they visited
+        clientId: new mongodb.ObjectId(this.data.clientId),
+        date: this.data.date
     };
 }
 
-// We're not really validating much here because we auto-capture the date and time.
+// Validate that the visit has a client ID.
 Visit.prototype.validate = function() {
     if (!this.data.clientId) {
         this.errors.push("Missing client ID - each visit must be linked to a client.");
     }
 }
 
-// Saving the visit information into our visits drawer.
+// Save the visit information into the database.
 Visit.prototype.create = function() {
     return new Promise(async (resolve, reject) => {
-        this.cleanUp(); // First, we tidy up the info.
-        this.validate(); // Then we check if everything's okay.
+        this.cleanUp();
+        this.validate();
         if (!this.errors.length) {
             try {
-                const result = await visitsCollection.insertOne(this.data);
-                this.data._id = result.insertedId; // MongoDB gives us a special tag so we can find this visit again.
-                resolve(this.data); // We did it! The visit info is saved.
+                const existingVisit = await visitsCollection.findOne({
+                    clientId: this.data.clientId,
+                    date: this.data.date
+                });
+
+                if (existingVisit) {
+                    this.errors.push("Visit already logged for today.");
+                    reject(this.errors);
+                } else {
+                    const result = await visitsCollection.insertOne(this.data);
+                    this.data._id = result.insertedId;  // Include the newly created ID in the visit data.
+                    resolve(this.data);
+                }
             } catch (e) {
                 this.errors.push("Database error: " + e);
-                reject(this.errors); // Oops! Something went wrong, and we didn't save the visit.
+                reject(this.errors);
             }
         } else {
-            reject(this.errors); // There was something wrong with the info, so we didn't save it.
+            reject(this.errors);
         }
     });
 }
 
-// Adding a method to find all visits by a specific client ID.
+// Find all visits associated with a specific client ID.
 Visit.findAllByClientId = function(clientId) {
-    // Convert string ID to MongoDB ObjectId format if necessary
     if (typeof(clientId) === 'string') {
         clientId = new mongodb.ObjectId(clientId);
     }
-
-    return visitsCollection.find({ clientId: clientId }).toArray(); // Search for all visits with the given client ID.
+    return visitsCollection.find({ clientId: clientId }).toArray();
 }
 
-// Let's make sure we can use our Visit book elsewhere in our clubhouse!
 module.exports = Visit;

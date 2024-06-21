@@ -43,9 +43,22 @@ apiRouter.delete("/client/:id", clientController.apiDeleteClient);  // Delete a 
 apiRouter.post("/create-client", clientController.apiCreateClient);  // Create a new client
 apiRouter.get("/clients", clientController.apiGetAllClients);  // Retrieve all clients
 
+
 // Visit related routes
 apiRouter.post("/client/:clientId/create-visit", visitController.apiCreateVisit);  // Log a new visit for a client
 apiRouter.get("/client/:clientId/visits", visitController.apiGetVisitsByClient);  // Retrieve all visits for a specific client
+
+/* function validateClientId(req, res, next) {
+    const { clientId } = req.params;
+    if (!ObjectId.isValid(clientId)) {
+        return res.status(400).json({ error: 'Invalid client ID.' });
+    }
+    next();
+}
+
+// Apply this middleware to the routes that require a valid client ID
+apiRouter.post("/client/:clientId/create-visit", validateClientId, visitController.apiCreateVisit);
+apiRouter.get("/client/:clientId/visits", validateClientId, visitController.apiGetVisitsByClient); */
 
 
 module.exports = apiRouter;

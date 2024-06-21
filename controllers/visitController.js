@@ -26,6 +26,10 @@ exports.apiCreateVisit = function(req, res) {
             res.status(201).json({ message: "Visit logged successfully", id: result._id }); // Tell everyone, "We wrote it down successfully!"
         })
         .catch(errors => {
-            res.status(500).json({ error: "Failed to log visit", details: errors }); // If something goes wrong, we tell what happened.
+            if (errors.includes("Visit already logged for today.")) {
+                res.status(409).json({ error: "Visit already logged for today" }); // Conflict error if visit already logged
+            } else {
+                res.status(500).json({ error: "Failed to log visit", details: errors }); // If something goes wrong, we tell what happened.
+            }
         });
 };
