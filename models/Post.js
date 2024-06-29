@@ -1,24 +1,26 @@
-const postsCollection = require("../db").db().collection("posts")
-const followsCollection = require("../db").db().collection("follows")
-const ObjectId = require("mongodb").ObjectId
-const User = require("./User")
-const sanitizeHTML = require("sanitize-html")
+const { getDB } = require('../db');
+const ObjectId = require("mongodb").ObjectId;
+const User = require("./User");
+const sanitizeHTML = require("sanitize-html");
 
-postsCollection.createIndex({ title: "text", body: "text" })
+const postsCollection = getDB().collection("posts");
+const followsCollection = getDB().collection("follows");
+
+postsCollection.createIndex({ title: "text", body: "text" });
 
 let Post = function (data, userid, requestedPostId) {
-  this.data = data
-  this.errors = []
-  this.userid = userid
-  this.requestedPostId = requestedPostId
-}
+  this.data = data;
+  this.errors = [];
+  this.userid = userid;
+  this.requestedPostId = requestedPostId;
+};
 
 Post.prototype.cleanUp = function () {
   if (typeof this.data.title != "string") {
-    this.data.title = ""
+    this.data.title = "";
   }
   if (typeof this.data.body != "string") {
-    this.data.body = ""
+    this.data.body = "";
   }
 
   // get rid of any bogus properties
@@ -27,68 +29,68 @@ Post.prototype.cleanUp = function () {
     body: sanitizeHTML(this.data.body.trim(), { allowedTags: [], allowedAttributes: {} }),
     createdDate: new Date(),
     author: new ObjectId(this.userid)
-  }
-}
+  };
+};
 
 Post.prototype.validate = function () {
   if (this.data.title == "") {
-    this.errors.push("You must provide a title.")
+    this.errors.push("You must provide a title.");
   }
   if (this.data.body == "") {
-    this.errors.push("You must provide post content.")
+    this.errors.push("You must provide post content.");
   }
-}
+};
 
 Post.prototype.create = function () {
   return new Promise((resolve, reject) => {
-    this.cleanUp()
-    this.validate()
+    this.cleanUp();
+    this.validate();
     if (!this.errors.length) {
       // save post into database
       postsCollection
         .insertOne(this.data)
         .then(info => {
-          resolve(info.insertedId)
+          resolve(info.insertedId);
         })
         .catch(e => {
-          this.errors.push("Please try again later.")
-          reject(this.errors)
-        })
+          this.errors.push("Please try again later.");
+          reject(this.errors);
+        });
     } else {
-      reject(this.errors)
+      reject(this.errors);
     }
-  })
-}
+  });
+};
 
 Post.prototype.update = function () {
   return new Promise(async (resolve, reject) => {
     try {
-      let post = await Post.findSingleById(this.requestedPostId, this.userid)
+      let post = await Post.findSingleById(this.requestedPostId, this.userid);
       if (post.isVisitorOwner) {
         // actually update the db
-        let status = await this.actuallyUpdate()
-        resolve(status)
+        let status = await this.actuallyUpdate();
+        resolve(status);
       } else {
-        reject()
+        reject();
       }
     } catch (e) {
-      reject()
+      reject();
     }
-  })
-}
+  });
+};
 
 Post.prototype.actuallyUpdate = function () {
   return new Promise(async (resolve, reject) => {
-    this.cleanUp()
-    this.validate()
+    this.cleanUp();
+    this.validate();
     if (!this.errors.length) {
-      await postsCollection.findOneAndUpdate({ _id: new ObjectId(this.requestedPostId) }, { $set: { title: this.data.title, body: this.data.body } })
-      resolve("success")
+      await postsCollection.findOneAndUpdate({ _id: new ObjectId(this.requestedPostId) }, { $set: { title: this.data.title, body: this.data.body } });
+      resolve("success");
     } else {
-      resolve("failure")
+      resolve("failure");
     }
-  })
-}
+  });
+};
 
 Post.reusablePostQuery = function (uniqueOperations, visitorId, finalOperations = []) {
   return new Promise(async function (resolve, reject) {
@@ -105,91 +107,91 @@ Post.reusablePostQuery = function (uniqueOperations, visitorId, finalOperations 
           }
         }
       ])
-      .concat(finalOperations)
+      .concat(finalOperations);
 
-    let posts = await postsCollection.aggregate(aggOperations).toArray()
+    let posts = await postsCollection.aggregate(aggOperations).toArray();
 
     // clean up author property in each post object
     posts = posts.map(function (post) {
-      post.isVisitorOwner = post.authorId.equals(visitorId)
-      post.authorId = undefined
+      post.isVisitorOwner = post.authorId.equals(visitorId);
+      post.authorId = undefined;
 
       post.author = {
         username: post.author.username,
         avatar: new User(post.author, true).avatar
-      }
+      };
 
-      return post
-    })
+      return post;
+    });
 
-    resolve(posts)
-  })
-}
+    resolve(posts);
+  });
+};
 
 Post.findSingleById = function (id, visitorId) {
   return new Promise(async function (resolve, reject) {
     if (typeof id != "string" || !ObjectId.isValid(id)) {
-      reject()
-      return
+      reject();
+      return;
     }
 
-    let posts = await Post.reusablePostQuery([{ $match: { _id: new ObjectId(id) } }], visitorId)
+    let posts = await Post.reusablePostQuery([{ $match: { _id: new ObjectId(id) } }], visitorId);
 
     if (posts.length) {
-      resolve(posts[0])
+      resolve(posts[0]);
     } else {
-      reject()
+      reject();
     }
-  })
-}
+  });
+};
 
 Post.findByAuthorId = function (authorId) {
-  return Post.reusablePostQuery([{ $match: { author: authorId } }, { $sort: { createdDate: -1 } }])
-}
+  return Post.reusablePostQuery([{ $match: { author: authorId } }, { $sort: { createdDate: -1 } }]);
+};
 
 Post.delete = function (postIdToDelete, currentUserId) {
   return new Promise(async (resolve, reject) => {
     try {
-      let post = await Post.findSingleById(postIdToDelete, currentUserId)
+      let post = await Post.findSingleById(postIdToDelete, currentUserId);
       if (post.isVisitorOwner) {
-        await postsCollection.deleteOne({ _id: new ObjectId(postIdToDelete) })
-        resolve()
+        await postsCollection.deleteOne({ _id: new ObjectId(postIdToDelete) });
+        resolve();
       } else {
-        reject()
+        reject();
       }
     } catch (e) {
-      reject()
+      reject();
     }
-  })
-}
+  });
+};
 
 Post.search = function (searchTerm) {
   return new Promise(async (resolve, reject) => {
     if (typeof searchTerm == "string") {
-      let posts = await Post.reusablePostQuery([{ $match: { $text: { $search: searchTerm } } }], undefined, [{ $sort: { score: { $meta: "textScore" } } }])
-      resolve(posts)
+      let posts = await Post.reusablePostQuery([{ $match: { $text: { $search: searchTerm } } }], undefined, [{ $sort: { score: { $meta: "textScore" } } }]);
+      resolve(posts);
     } else {
-      reject()
+      reject();
     }
-  })
-}
+  });
+};
 
 Post.countPostsByAuthor = function (id) {
   return new Promise(async (resolve, reject) => {
-    let postCount = await postsCollection.countDocuments({ author: id })
-    resolve(postCount)
-  })
-}
+    let postCount = await postsCollection.countDocuments({ author: id });
+    resolve(postCount);
+  });
+};
 
 Post.getFeed = async function (id) {
   // create an array of the user ids that the current user follows
-  let followedUsers = await followsCollection.find({ authorId: new ObjectId(id) }).toArray()
+  let followedUsers = await followsCollection.find({ authorId: new ObjectId(id) }).toArray();
   followedUsers = followedUsers.map(function (followDoc) {
-    return followDoc.followedId
-  })
+    return followDoc.followedId;
+  });
 
   // look for posts where the author is in the above array of followed users
-  return Post.reusablePostQuery([{ $match: { author: { $in: followedUsers } } }, { $sort: { createdDate: -1 } }])
-}
+  return Post.reusablePostQuery([{ $match: { author: { $in: followedUsers } } }, { $sort: { createdDate: -1 } }]);
+};
 
-module.exports = Post
+module.exports = Post;

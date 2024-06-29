@@ -1,6 +1,8 @@
+const { getDB } = require('../db');
 const mongodb = require('mongodb');
-const clientsCollection = require('../db').db().collection("clients_dev");
 const qrcode = require('qrcode');
+
+const clientsCollection = getDB().collection(process.env.NODE_ENV === 'production' ? "clients" : "clients_dev");
 
 let Client = function(data) {
     this.data = data;

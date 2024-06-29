@@ -1,14 +1,14 @@
+const { getDB } = require('../db');
 const mongodb = require('mongodb');
-const db = require('../db').db();
-const collectionName = process.env.NODE_ENV === 'production' ? 'visits' : 'visits_dev';
-const visitsCollection = db.collection(collectionName);
+const ObjectId = mongodb.ObjectId;
+
+const visitsCollection = getDB().collection(process.env.NODE_ENV === 'production' ? "visits" : "visits_dev");
 
 let Visit = function(data) {
     this.data = data;
     this.errors = [];
 }
 
-// Ensures data is clean and formatted correctly.
 Visit.prototype.cleanUp = function() {
     if (!(this.data.date instanceof Date)) {
         this.data.date = new Date();
@@ -19,19 +19,17 @@ Visit.prototype.cleanUp = function() {
 
     // We will store only the clientId and the formatted date.
     this.data = {
-        clientId: new mongodb.ObjectId(this.data.clientId),
+        clientId: new ObjectId(this.data.clientId),
         date: this.data.date
     };
 }
 
-// Validate that the visit has a client ID.
 Visit.prototype.validate = function() {
     if (!this.data.clientId) {
         this.errors.push("Missing client ID - each visit must be linked to a client.");
     }
 }
 
-// Save the visit information into the database.
 Visit.prototype.create = function() {
     return new Promise(async (resolve, reject) => {
         this.cleanUp();
@@ -61,10 +59,9 @@ Visit.prototype.create = function() {
     });
 }
 
-// Find all visits associated with a specific client ID.
 Visit.findAllByClientId = function(clientId) {
     if (typeof(clientId) === 'string') {
-        clientId = new mongodb.ObjectId(clientId);
+        clientId = new ObjectId(clientId);
     }
     return visitsCollection.find({ clientId: clientId }).toArray();
 }
