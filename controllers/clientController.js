@@ -1,5 +1,6 @@
 const Client = require("../models/Client");
-const clientsCollection = require("../db").db().collection("clients");
+const db = require("../db");
+const clientsCollection = db.db().collection(process.env.NODE_ENV === 'production' ? "clients" : "clients_dev");
 const ObjectId = require("mongodb").ObjectId;
 
 exports.apiCreateClient = function(req, res) {

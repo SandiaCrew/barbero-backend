@@ -1,5 +1,5 @@
 const mongodb = require('mongodb');
-const clientsCollection = require('../db').db().collection("clients");
+const clientsCollection = require('../db').db().collection("clients_dev");
 const qrcode = require('qrcode');
 
 let Client = function(data) {
