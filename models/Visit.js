@@ -1,7 +1,7 @@
-// Visit.js
-
 const mongodb = require('mongodb');
-const visitsCollection = require('../db').db().collection("visits");
+const db = require('../db').db();
+const collectionName = process.env.NODE_ENV === 'production' ? 'visits' : 'visits_dev';
+const visitsCollection = db.collection(collectionName);
 
 let Visit = function(data) {
     this.data = data;

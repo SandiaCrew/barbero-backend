@@ -20,14 +20,14 @@ const client = new MongoClient(process.env.MONGODB_URI);
 async function start() {
   try {
     await client.connect();
-    console.log(`Connected to MongoDB at ${process.env.MONGODB_URI}`);
+    console.log(`Connected to MongoDB`);
     module.exports = client;
 
     // Import and start the app
     const app = require("./app");
     const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => {
-      console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+      
     });
   } catch (error) {
     console.error("Failed to connect to MongoDB", error);
